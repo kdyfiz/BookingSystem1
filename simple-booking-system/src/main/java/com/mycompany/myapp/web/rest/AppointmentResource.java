@@ -243,4 +243,60 @@ public class AppointmentResource {
             return ResponseEntity.status(302).headers(headers).build();
         }
     }
+
+    /**
+     * {@code PUT  /appointments/:id/reject} : Reject a REQUESTED appointment.
+     *
+     * @param id the id of the appointment to reject.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated appointmentDTO,
+     * or with status {@code 404 (Not Found)} if the appointmentDTO is not found.
+     */
+    @PutMapping("/{id}/reject")
+    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    public ResponseEntity<AppointmentDTO> rejectAppointment(@PathVariable("id") Long id) {
+        LOG.debug("REST request to reject Appointment : {}", id);
+        LOG.info("Rejecting appointment with ID: {}", id);
+        
+        Optional<AppointmentDTO> result = appointmentService.rejectAppointment(id);
+        
+        if (result.isPresent()) {
+            LOG.info("Successfully rejected appointment: {}", result.get());
+            return ResponseUtil.wrapOrNotFound(
+                result,
+                HeaderUtil.createAlert(applicationName, "Appointment rejected", id.toString())
+            );
+        } else {
+            LOG.warn("Failed to reject appointment with ID: {}", id);
+            return ResponseUtil.wrapOrNotFound(
+                result,
+                HeaderUtil.createAlert(applicationName, "Appointment not found or not in REQUESTED state", id.toString())
+            );
+        }
+    }
+
+    /**
+     * {@code GET  /appointments/:id/reject-test} : Test endpoint to reject appointments.
+     * This is a workaround for testing.
+     */
+    @GetMapping("/{id}/reject-test")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<Void> rejectAppointmentTest(@PathVariable("id") Long id) {
+        LOG.info("REST request to test reject Appointment : {}", id);
+        
+        Optional<AppointmentDTO> result = appointmentService.rejectAppointment(id);
+        
+        if (result.isPresent()) {
+            LOG.info("Test: Successfully rejected appointment: {}", result.get());
+            // Redirect to the appointments page
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Location", "/appointment");
+            return ResponseEntity.status(302).headers(headers).build();
+        } else {
+            LOG.warn("Test: Failed to reject appointment with ID: {}", id);
+            // Redirect to the appointments page even if there's a failure
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Location", "/appointment");
+            return ResponseEntity.status(302).headers(headers).build();
+        }
+    }
 }

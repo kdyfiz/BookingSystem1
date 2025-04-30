@@ -42,4 +42,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         "select appointment from Appointment appointment left join fetch appointment.user left join fetch appointment.service where appointment.id =:id"
     )
     Optional<Appointment> findOneWithToOneRelationships(@Param("id") Long id);
+
+    /**
+     * Find overlapping appointments for a user and service within a time range.
+     */
+    @Query("select a from Appointment a where a.user.id = :userId and a.service.id = :serviceId and a.status in ('REQUESTED', 'SCHEDULED') and ((a.startTime < :endTime and a.endTime > :startTime))")
+    List<Appointment> findOverlappingAppointments(@Param("userId") Long userId, @Param("serviceId") Long serviceId, @Param("startTime") java.time.Instant startTime, @Param("endTime") java.time.Instant endTime);
 }

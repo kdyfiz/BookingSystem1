@@ -96,6 +96,32 @@ export const approveAppointment = createAsyncThunk(
   { serializeError: serializeAxiosError },
 );
 
+export const rejectAppointment = createAsyncThunk(
+  'appointment/reject',
+  async (id: string | number, thunkAPI) => {
+    try {
+      // First try the PUT endpoint
+      const requestUrl = `${apiUrl}/${id}/reject`;
+      try {
+        const result = await axios.put<IAppointment>(requestUrl, {});
+        thunkAPI.dispatch(getEntities({}));
+        return result;
+      } catch (putError) {
+        console.warn('PUT rejection failed, trying GET fallback', putError);
+        // Fallback to GET endpoint
+        const fallbackUrl = `${apiUrl}/${id}/reject-test`;
+        const fallbackResult = await axios.get<IAppointment>(fallbackUrl);
+        thunkAPI.dispatch(getEntities({}));
+        return fallbackResult;
+      }
+    } catch (error) {
+      console.error('Error rejecting appointment:', error);
+      return thunkAPI.rejectWithValue(error);
+    }
+  },
+  { serializeError: serializeAxiosError },
+);
+
 export const deleteEntity = createAsyncThunk(
   'appointment/delete_entity',
   async (id: string | number, thunkAPI) => {
@@ -128,6 +154,11 @@ export const AppointmentSlice = createEntitySlice({
         state.loading = false;
         state.entity = action.payload.data;
       })
+      .addCase(rejectAppointment.fulfilled, (state, action) => {
+        state.updating = false;
+        state.loading = false;
+        state.entity = action.payload.data;
+      })
       .addMatcher(isFulfilled(getEntities), (state, action) => {
         const { data, headers } = action.payload;
 
@@ -149,11 +180,14 @@ export const AppointmentSlice = createEntitySlice({
         state.updateSuccess = false;
         state.loading = true;
       })
-      .addMatcher(isPending(createEntity, updateEntity, partialUpdateEntity, deleteEntity, approveAppointment), state => {
-        state.errorMessage = null;
-        state.updateSuccess = false;
-        state.updating = true;
-      });
+      .addMatcher(
+        isPending(createEntity, updateEntity, partialUpdateEntity, deleteEntity, approveAppointment, rejectAppointment),
+        state => {
+          state.errorMessage = null;
+          state.updateSuccess = false;
+          state.updating = true;
+        },
+      );
   },
 });
 

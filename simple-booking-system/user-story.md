@@ -9,6 +9,7 @@
 - A confirmation email should be sent to the customer *only* after admin approval.
 - Cancellations should be allowed up to 24 hours before the appointment time.
 - Booking requests must be approved by an admin before they are confirmed.
+- The admin appointment list page should include an approval status column. The default status should be "Pending" and change to "Approved" after admin approval.
 
 **Acceptance Criteria**:
 1. Users can view available time slots for a given service.
@@ -17,6 +18,7 @@
 4. The system prevents double-booking of time slots.
 5. The system handles invalid input gracefully.
 6. Users can cancel appointments up to 24 hours in advance.
+7. The admin appointment list displays the approval status of each booking request.
 
 **Functional Requirements**:
 - View available time slots.
@@ -25,6 +27,8 @@
 - Cancel an appointment.
 - Manage appointment details (e.g., date, time, service).
 - Search for available appointments based on criteria (e.g., date, service).
+- Admin can approve or reject booking requests.
+- Admin can view the list of appointments with their approval status.
 
 **Non-Functional Requirements**:
 - The system should be user-friendly and easy to navigate.
@@ -37,4 +41,5 @@
 - A clear and concise booking form.
 - A confirmation page after successful booking.
 - A user account section to manage bookings.
+- An admin panel to manage appointment requests and their approval status.
 - Responsive design for various screen sizes.

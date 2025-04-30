@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Table } from 'reactstrap';
+import { Button, Table, ButtonGroup, ButtonToolbar } from 'reactstrap';
 import { JhiItemCount, JhiPagination, TextFormat, Translate, getPaginationState } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSort, faSortDown, faSortUp, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faSort, faSortDown, faSortUp, faCheck, faTimes, faFilter } from '@fortawesome/free-solid-svg-icons';
 import { APP_DATE_FORMAT } from 'app/config/constants';
 import { ASC, DESC, ITEMS_PER_PAGE, SORT } from 'app/shared/util/pagination.constants';
 import { overridePaginationStateWithQueryParams } from 'app/shared/util/entity-utils';
@@ -11,11 +11,12 @@ import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { hasAnyAuthority } from 'app/shared/auth/private-route';
 import { AUTHORITIES } from 'app/config/constants';
 
-import { getEntities, approveAppointment } from './appointment.reducer';
+import { getEntities, approveAppointment, rejectAppointment } from './appointment.reducer';
 
 export const Appointment = () => {
   const dispatch = useAppDispatch();
   const [errorMessage, setErrorMessage] = useState('');
+  const [showPendingOnly, setShowPendingOnly] = useState(false);
 
   const pageLocation = useLocation();
   const navigate = useNavigate();
@@ -106,15 +107,37 @@ export const Appointment = () => {
     }, 1000);
   };
 
+  const handleReject = (id: string) => {
+    setErrorMessage('');
+    // Use window.location to navigate to the test endpoint directly
+    // This will cause a page reload, but it will work around the API issue
+    window.location.href = `/api/appointments/${id}/reject-test`;
+    // After a short delay, navigate back to appointments
+    setTimeout(() => {
+      window.location.href = '/appointment';
+    }, 1000);
+  };
+
+  let displayedAppointments = appointmentList;
+  if (showPendingOnly) {
+    displayedAppointments = appointmentList.filter(appointment => appointment.status === 'REQUESTED');
+  }
+
   return (
     <div>
       <h2 id="appointment-heading" data-cy="AppointmentHeading">
         <Translate contentKey="simpleBookingSystemApp.appointment.home.title">Appointments</Translate>
         <div className="d-flex justify-content-end">
-          <Button className="me-2" color="info" onClick={handleSyncList} disabled={loading}>
-            <FontAwesomeIcon icon="sync" spin={loading} />{' '}
-            <Translate contentKey="simpleBookingSystemApp.appointment.home.refreshListLabel">Refresh List</Translate>
-          </Button>
+          {hasAnyAuthority([AUTHORITIES.ADMIN], account.authorities) && (
+            <Button
+              color={showPendingOnly ? 'primary' : 'outline-primary'}
+              onClick={() => setShowPendingOnly(!showPendingOnly)}
+              className="me-2"
+              size="sm"
+            >
+              <FontAwesomeIcon icon={faFilter} /> {showPendingOnly ? 'All Appointments' : 'Pending Only'}
+            </Button>
+          )}
           <Link to="/appointment/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
             <FontAwesomeIcon icon="plus" />
             &nbsp;
@@ -130,7 +153,7 @@ export const Appointment = () => {
       )}
 
       <div className="table-responsive">
-        {appointmentList && appointmentList.length > 0 ? (
+        {displayedAppointments && displayedAppointments.length > 0 ? (
           <Table responsive>
             <thead>
               <tr>
@@ -160,7 +183,7 @@ export const Appointment = () => {
               </tr>
             </thead>
             <tbody>
-              {appointmentList.map((appointment, i) => (
+              {displayedAppointments.map((appointment, i) => (
                 <tr key={`entity-${i}`} data-cy="entityTable">
                   <td>
                     <Button tag={Link} to={`/appointment/${appointment.id}`} color="link" size="sm">
@@ -184,22 +207,14 @@ export const Appointment = () => {
                           <Translate contentKey="entity.action.view">View</Translate>
                         </span>
                       </Button>
-                      <Button
-                        tag={Link}
-                        to={`/appointment/${appointment.id}/edit?page=${paginationState.activePage}&sort=${paginationState.sort},${paginationState.order}`}
-                        color="primary"
-                        size="sm"
-                        data-cy="entityEditButton"
-                      >
+                      <Button tag={Link} to={`/appointment/${appointment.id}/edit`} color="primary" size="sm" data-cy="entityEditButton">
                         <FontAwesomeIcon icon="pencil-alt" />{' '}
                         <span className="d-none d-md-inline">
                           <Translate contentKey="entity.action.edit">Edit</Translate>
                         </span>
                       </Button>
                       <Button
-                        onClick={() =>
-                          (window.location.href = `/appointment/${appointment.id}/delete?page=${paginationState.activePage}&sort=${paginationState.sort},${paginationState.order}`)
-                        }
+                        onClick={() => (location.href = `/appointment/${appointment.id}/delete`)}
                         color="danger"
                         size="sm"
                         data-cy="entityDeleteButton"
@@ -210,12 +225,20 @@ export const Appointment = () => {
                         </span>
                       </Button>
                       {hasAnyAuthority([AUTHORITIES.ADMIN], account.authorities) && appointment.status === 'REQUESTED' && (
-                        <Button onClick={() => handleApprove(appointment.id)} color="success" size="sm" data-cy="entityApproveButton">
-                          <FontAwesomeIcon icon={faCheck} />{' '}
-                          <span className="d-none d-md-inline">
-                            <Translate contentKey="entity.action.approve">Approve</Translate>
-                          </span>
-                        </Button>
+                        <>
+                          <Button onClick={() => handleApprove(appointment.id)} color="success" size="sm" data-cy="entityApproveButton">
+                            <FontAwesomeIcon icon={faCheck} />{' '}
+                            <span className="d-none d-md-inline">
+                              <Translate contentKey="entity.action.approve">Approve</Translate>
+                            </span>
+                          </Button>
+                          <Button onClick={() => handleReject(appointment.id)} color="danger" size="sm" data-cy="entityRejectButton">
+                            <FontAwesomeIcon icon={faTimes} />{' '}
+                            <span className="d-none d-md-inline">
+                              <Translate contentKey="entity.action.reject">Reject</Translate>
+                            </span>
+                          </Button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -232,7 +255,7 @@ export const Appointment = () => {
         )}
       </div>
       {totalItems ? (
-        <div className={appointmentList && appointmentList.length > 0 ? '' : 'd-none'}>
+        <div className={displayedAppointments && displayedAppointments.length > 0 ? '' : 'd-none'}>
           <div className="justify-content-center d-flex">
             <JhiItemCount page={paginationState.activePage} total={totalItems} itemsPerPage={paginationState.itemsPerPage} i18nEnabled />
           </div>

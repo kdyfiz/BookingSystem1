@@ -78,7 +78,7 @@ const BookingPage = () => {
       const newAppointment = {
         startTime: dayjs(selectedTimeSlot.startTime),
         endTime: dayjs(selectedTimeSlot.endTime),
-        status: AppointmentStatus.SCHEDULED,
+        status: AppointmentStatus.REQUESTED,
         user: {
           login: account.login,
           id: account.id,
@@ -88,7 +88,15 @@ const BookingPage = () => {
         },
       };
 
-      dispatch(createAppointment(newAppointment));
+      dispatch(createAppointment(newAppointment)).then((action: any) => {
+        if (action.type.endsWith('rejected')) {
+          toast.error(
+            action.error?.message?.includes('Overlapping appointment')
+              ? 'You already have an appointment for this service at the selected time.'
+              : 'Failed to book appointment. Please try again.',
+          );
+        }
+      });
     }
   };
 

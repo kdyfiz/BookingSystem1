@@ -3,14 +3,14 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Button, Col, Row } from 'reactstrap';
 import { TextFormat, Translate } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 
 import { APP_DATE_FORMAT } from 'app/config/constants';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { hasAnyAuthority } from 'app/shared/auth/private-route';
 import { AUTHORITIES } from 'app/config/constants';
 
-import { getEntity, approveAppointment } from './appointment.reducer';
+import { getEntity, approveAppointment, rejectAppointment } from './appointment.reducer';
 
 export const AppointmentDetail = () => {
   const dispatch = useAppDispatch();
@@ -33,6 +33,11 @@ export const AppointmentDetail = () => {
   const handleApprove = () => {
     // Direct browser navigation workaround
     window.location.href = `/api/appointments/${id}/approve-test`;
+  };
+
+  const handleReject = () => {
+    dispatch(rejectAppointment(id));
+    navigate('/appointment');
   };
 
   const userAuthorities = useAppSelector(state => state.authentication.account.authorities);
@@ -95,6 +100,13 @@ export const AppointmentDetail = () => {
               <FontAwesomeIcon icon={faCheck} />{' '}
               <span className="d-none d-md-inline">
                 <Translate contentKey="entity.action.approve">Approve</Translate>
+              </span>
+            </Button>
+            &nbsp;
+            <Button onClick={handleReject} color="danger" data-cy="entityRejectButton">
+              <FontAwesomeIcon icon={faTimes} />{' '}
+              <span className="d-none d-md-inline">
+                <Translate contentKey="entity.action.reject">Reject</Translate>
               </span>
             </Button>
             &nbsp;

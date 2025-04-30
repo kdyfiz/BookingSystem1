@@ -40,6 +40,20 @@ public class AppointmentService {
     public AppointmentDTO save(AppointmentDTO appointmentDTO) {
         LOG.debug("Request to save Appointment : {}", appointmentDTO);
         Appointment appointment = appointmentMapper.toEntity(appointmentDTO);
+        // Set status to REQUESTED by default for new appointments
+        appointment.setStatus(AppointmentStatus.REQUESTED);
+        // Prevent overlapping appointments for the same user/service
+        if (appointment.getUser() != null && appointment.getService() != null) {
+            var overlaps = appointmentRepository.findOverlappingAppointments(
+                appointment.getUser().getId(),
+                appointment.getService().getId(),
+                appointment.getStartTime(),
+                appointment.getEndTime()
+            );
+            if (!overlaps.isEmpty()) {
+                throw new IllegalStateException("Overlapping appointment exists for this user and service in the selected time range.");
+            }
+        }
         appointment = appointmentRepository.save(appointment);
         return appointmentMapper.toDto(appointment);
     }
@@ -140,6 +154,31 @@ public class AppointmentService {
                     return appointmentMapper.toDto(appointment);
                 } else {
                     LOG.warn("Cannot approve appointment with status: {}", appointment.getStatus());
+                    return appointmentMapper.toDto(appointment);
+                }
+            });
+    }
+
+    /**
+     * Reject an appointment request.
+     *
+     * @param id the id of the appointment to reject.
+     * @return the persisted entity.
+     */
+    @Transactional
+    public Optional<AppointmentDTO> rejectAppointment(Long id) {
+        LOG.debug("Request to reject Appointment : {}", id);
+        
+        return appointmentRepository.findById(id)
+            .map(appointment -> {
+                LOG.info("Found appointment: {}, current status: {}", id, appointment.getStatus());
+                if (appointment.getStatus() == AppointmentStatus.REQUESTED) {
+                    LOG.info("Updating appointment status from REQUESTED to CANCELLED");
+                    appointment.setStatus(AppointmentStatus.CANCELLED);
+                    appointmentRepository.save(appointment);
+                    return appointmentMapper.toDto(appointment);
+                } else {
+                    LOG.warn("Cannot reject appointment with status: {}", appointment.getStatus());
                     return appointmentMapper.toDto(appointment);
                 }
             });
